@@ -11,6 +11,7 @@ var async = require('async')
 var _ = require('underscore')
 var bunyan = require('bunyan')
 
+var config = require('./lib/config')
 var server = require('./lib/server')
 var models = require('./lib/models')
 var aws = require('./lib/aws/factory')
@@ -39,6 +40,7 @@ function ConsumerCluster(pathToConsumer, opts) {
 
   this.client = aws.create(opts.awsConfig, false, 'Kinesis')
 
+  this.acceptingConsumers = true
   this.externalNetwork = {}
   this.consumers = {}
   this.consumerIds = []
@@ -112,6 +114,7 @@ ConsumerCluster.prototype._bindListeners = function () {
   })
 
   this.on('availableShard', function (shardId, leaseCounter) {
+    if (! _this.acceptingConsumers) return
     _this.spawn(shardId, leaseCounter)
   })
 }
@@ -285,7 +288,13 @@ ConsumerCluster.prototype._addConsumer = function (consumer) {
 ConsumerCluster.prototype._killConsumer = function () {
   var id = this.consumerIds[0]
   this.logger.info({id: id}, 'Killing consumer')
-  this.consumers[id].kill()
+  this.consumers[id].send(config.shutdownMessage)
+
+  setTimeout(function () {
+    if (this.consumers[id]) {
+      this.consumers[id].kill()
+    }
+  }.bind(this), 60000).unref()
 }
 
 

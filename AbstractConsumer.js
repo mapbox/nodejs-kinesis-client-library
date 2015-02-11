@@ -8,6 +8,7 @@ var async = require('async')
 var bunyan = require('bunyan')
 var _ = require('underscore')
 
+var config = require('./lib/config')
 var models = require('./lib/models')
 var aws = require('./lib/aws/factory')
 var kinesis = require('./lib/aws/kinesis')
@@ -46,6 +47,13 @@ function AbstractConsumer(opts) {
     streamName: opts.streamName,
     shardId: opts.shardId
   })
+
+  this.hasStartedExit = false
+  process.on('message', function (msg) {
+    if (msg === config.shutdownMessage) {
+      this._exit()
+    }
+  }.bind(this))
 }
 
 /**
@@ -329,6 +337,10 @@ AbstractConsumer.prototype._updateShardIterator = function (sequenceNumber, call
  */
 AbstractConsumer.prototype._exit = function (err) {
   var _this = this
+
+  if (this.hasStartedExit) return
+  this.hasStartedExit = true
+
   if (err) {
     this.logger.error(err)
   }
