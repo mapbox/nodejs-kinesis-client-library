@@ -38,7 +38,7 @@ function ConsumerCluster(pathToConsumer, opts) {
 
   this.cluster = new models.Cluster(opts.tableName, opts.awsConfig, opts.localDynamo)
 
-  this.client = aws.create(opts.awsConfig, false, 'Kinesis')
+  this.client = aws.create(opts.awsKinesisConfig, false, 'Kinesis')
 
   this.isShuttingDownFromError = false
   this.externalNetwork = {}
